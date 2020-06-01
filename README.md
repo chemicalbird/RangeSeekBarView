@@ -5,7 +5,7 @@
 RangeSeekBarView is written in Java library. Customizable. Allows to use your vector-drawable as a thumb for seekbar, and use
 your created shape drawable as a drawable. Currently RangeView is only linear(timeline), should be more customiazble in future.
 
-![](screens/preview.png)
+![](screens/preview.png =200x)
 
 ## Installation
 
