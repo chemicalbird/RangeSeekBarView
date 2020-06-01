@@ -1,0 +1,3 @@
+rootProject.name='RangeView'
+include ':app'
+include ':library'
