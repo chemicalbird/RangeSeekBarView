@@ -24,8 +24,6 @@ import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.graphics.drawable.DrawableCompat;
 
-import com.example.library.R;
-
 public class RangeSeekBarView extends View {
     Paint negativePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     PointF arrowPos = new PointF();
