@@ -251,7 +251,7 @@ public class RangeSeekBarView extends View {
         return right - left - handleSize;
     }
 
-    void drawTrace1(Canvas canvas) {
+    public void drawTrace1(Canvas canvas) {
         int borderHeight = borderDrawable.getIntrinsicHeight() > 0 ?
                 borderDrawable.getIntrinsicHeight() : (int) boxRect.height();
         int top = (getHeight() - borderHeight) / 2;
@@ -262,7 +262,7 @@ public class RangeSeekBarView extends View {
         canvas.drawRect(x2 - extra2, top, right, bottom, negativePaint);
     }
 
-    void drawTrace2(Canvas canvas) {
+    public void drawTrace2(Canvas canvas) {
         if (x1 > left || right > x2) {
             borderDrawable.setBounds((int) left, (int) top, (int) right, (int) bottom);
             borderDrawable.setAlpha(90);

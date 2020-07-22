@@ -98,6 +98,37 @@
         app:background="@drawable/background_2"
         />
 
+    <HorizontalScrollView
+        android:id="@+id/horizontal_sc"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="20dp"
+        android:clipToPadding="false"
+        android:paddingLeft="200dp"
+        android:paddingRight="200dp"
+        android:scrollbars="none">
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:background="@android:color/holo_purple">
+
+            <com.android.rangeview.SplitRangeView
+                android:id="@+id/split_range"
+                android:layout_width="2000dp"
+                android:layout_height="40dp"
+                android:textColor="@android:color/darker_gray"
+                app:background="@drawable/background_sel"
+                app:thumbSrc="@drawable/ic_navigate_next_black_24dp"
+                app:thumb_padding="-2dp"
+                app:srcTint="@android:color/white"
+                app:thumbGravity="right|center"
+                app:selectionTint="@android:color/white"
+                />
+        </FrameLayout>
+    </HorizontalScrollView>
+
     <TextView
         android:id="@+id/info"
         android:layout_marginTop="12dp"

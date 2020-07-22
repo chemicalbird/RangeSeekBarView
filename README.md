@@ -5,7 +5,7 @@
 RangeSeekBarView is written in Java library. Customizable. Allows to use your vector-drawable as a thumb for seekbar, and use
 your created shape drawable as a drawable. Currently RangeView is only linear(timeline), should be more customiazble in future.
 <p align="center">
-<img src="screens/preview.png" width="220">
+<img src="screens/preview.jpg" width="220">
 </p>
 
 ## Installation
@@ -33,11 +33,15 @@ dependencies {
         app:srcTint="@android:color/holo_blue_light"
         />
 ```
-
+There is also an implementation of a range view with multiple spans
+`SplitRangeView`, declare the view in your layout, then later call
+`addSpan(..)` from your code. Check sample project for directions.
 ## Release History
 
 * 0.0.1
-    * First release
+  * First release
+* 0.0.2
+  * Added SplitRangeView (add multiple spans with range manipulation)
 
 <!---
 ## Contributing

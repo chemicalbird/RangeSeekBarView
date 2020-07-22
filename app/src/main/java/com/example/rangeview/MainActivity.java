@@ -2,10 +2,12 @@ package com.example.rangeview;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.widget.TextView;
 
 import com.android.rangeview.RangeSeekBarView;
+import com.android.rangeview.SplitRangeView;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -22,6 +24,7 @@ public class MainActivity extends AppCompatActivity {
     };
     private TextView infoView;
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,5 +63,14 @@ public class MainActivity extends AppCompatActivity {
             seekBarView5.resetState(100, 400, true);
             seekBarView6.resetState(0, 1000, true);
         });
+
+        SplitRangeView splitRangeView = findViewById(R.id.split_range);
+        splitRangeView.getLayoutParams().width = 60 * 100;
+        splitRangeView.addSpan(0, 100);
+
+        splitRangeView.addSpan(200, 399);
+
+        splitRangeView.addSpan(600, 790);
+        splitRangeView.addSpan(2000, 2200);
     }
 }
