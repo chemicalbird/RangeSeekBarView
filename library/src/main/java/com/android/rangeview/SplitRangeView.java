@@ -5,7 +5,6 @@ import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -47,8 +46,18 @@ public class SplitRangeView extends View {
     private Paint spanTextPaint;
 
     private GestureDetector gestureDetector;
-    private int textPad = 40;
     private Rect tempRect = new Rect();
+
+    private int textPad = 40;
+    private int minimumSize = 10;
+
+    public void setInfoPadding(int textPad) {
+        this.textPad = textPad;
+    }
+
+    public void setMinimumSize(int minimumSize) {
+        this.minimumSize = minimumSize;
+    }
 
     public static int dpToPx(Context context, float dp) {
         float density = context.getResources().getDisplayMetrics().density;
@@ -156,25 +165,31 @@ public class SplitRangeView extends View {
                     if (activeSpan.handlesShowing) {
                         hasUpdate = true;
                         if (activeSpan.leftDragging) {
-                            handleLeftMovement(dxInt);
+                            handleLeftMovement(activeSpan, dxInt);
                         } else if (activeSpan.rightDragging) {
-                            handleRightMovement(dxInt);
+                            handleRightMovement(activeSpan, dxInt);
                         } else if (activeSpan.translateDragging) {
-                            if (canMove(activeSpan, dx)) {
-                                activeSpan.move(dxInt);
+                            int amount = computeActualDistance(activeSpan, dxInt);
+                            if (amount != 0) {
+                                activeSpan.move(amount);
+                            } else {
+                                hasUpdate = false;
                             }
                         } else {
                             float leftDiff = Math.abs(newX - activeSpan.offset);
                             float rightDiff = Math.abs(newX - activeSpan.end());
                             if (leftDiff < rightDiff && leftDiff <= handleSize) {
-                                handleLeftMovement(dxInt);
+                                handleLeftMovement(activeSpan, dxInt);
                             } else if (rightDiff < leftDiff && rightDiff <= handleSize) {
-                                handleRightMovement(dxInt);
-                            } else if (canMove(activeSpan, dx)) {
-                                activeSpan.translateDragging = true;
-                                activeSpan.move(dxInt);
+                                handleRightMovement(activeSpan, dxInt);
                             } else {
-                                hasUpdate = false;
+                                int amount = computeActualDistance(activeSpan, dxInt);
+                                if (amount != 0) {
+                                    activeSpan.translateDragging = true;
+                                    activeSpan.move(amount);
+                                } else {
+                                    hasUpdate = false;
+                                }
                             }
                         }
                     }
@@ -201,24 +216,35 @@ public class SplitRangeView extends View {
         return super.onTouchEvent(ev);
     }
 
-    private void handleLeftMovement(int dx) {
-        int oldV = activeSpan.offset;
-        activeSpan.offset = dx < 0 && !canMove(activeSpan, dx) ? activeSpan.offset :
-                Math.min(activeSpan.offset + dx, activeSpan.end() - 10);
-//        activeSpan.length += oldV - activeSpan.offset;
-        activeSpan.length = Math.max(activeSpan.length + oldV - activeSpan.offset, 10);
-        activeSpan.leftDragging = true;
+    private void handleLeftMovement(Span span, int dx) {
+        if (dx < 0) {
+            int newDx = computeActualDistance(span, dx);
+            if (newDx != 0) {
+                span.shrinkLeft(newDx);
+            }
+        } else {
+            span.shrinkLeft(Math.min(dx, span.length - minimumSize));
+        }
+
+        span.leftDragging = true;
     }
 
-    private void handleRightMovement(int dx) {
-        activeSpan.length = dx > 0 && !canMove(activeSpan, dx) ? activeSpan.length :
-                Math.max(activeSpan.length + dx, 10);
-        activeSpan.rightDragging = true;
+    private void handleRightMovement(Span span, int dx) {
+        if (dx > 0) {
+            int newDx = computeActualDistance(span, dx);
+            if (newDx != 0) {
+                span.length += newDx;
+            }
+        } else {
+            span.length = Math.max(span.length + dx, minimumSize);
+        }
+
+        span.rightDragging = true;
     }
 
-    private boolean canMove(Span target, float dx) {
+    private int computeActualDistance(Span target, int dx) {
         boolean canMove = dx < 0 && target.offset + dx > 0 || dx > 0 && target.end() + dx < getWidth();
-        if (!canMove) return false;
+        if (!canMove) return 0;
 
         for (Span child: rangeSpans) {
             if (child == target) {
@@ -236,16 +262,12 @@ public class SplitRangeView extends View {
             }
 
             if (!canMove) {
-                int compensate = dx > 0 ? child.offset - target.end() : child.end() - target.offset;
-                if (compensate != 0) {
-                    target.move(compensate);
-                    invalidate();
-                }
-                break;
+                // requested dx can be bigger: compensate
+                return dx > 0 ? child.offset - target.end() : child.end() - target.offset;
             }
         }
 
-        return canMove;
+        return dx;
     }
 
     private Span findBarUnder(float x) {
@@ -471,6 +493,12 @@ public class SplitRangeView extends View {
 
         public int end() {
             return offset + length;
+        }
+
+        void shrinkLeft(int dx) {
+            int oldOffset = offset;
+            offset += dx;
+            length = length - (offset - oldOffset);
         }
 
         public void move(int dx) {
