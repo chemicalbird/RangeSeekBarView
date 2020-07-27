@@ -13,3 +13,7 @@
 /captures
 .externalNativeBuild
 .cxx
+/.history
+app/.history
+library/.history
+/.vscode
