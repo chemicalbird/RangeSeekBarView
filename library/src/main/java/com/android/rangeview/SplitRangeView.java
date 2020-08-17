@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SplitRangeView extends View {
+    private static final String TAG = SplitRangeView.class.getSimpleName();
+
     private final int prefferedTextHeight;
     RectF boxRect = new RectF();
     int handleSize;
@@ -150,14 +152,13 @@ public class SplitRangeView extends View {
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 currentX = ev.getX();
-                activeSpan = findBarUnder(currentX);
-
+                activeSpan = findActiveSpanUnder(currentX);
                 return true;
             case MotionEvent.ACTION_MOVE:
                 float newX = ev.getX(0);
+                float newY = ev.getY(0);
                 float dx = newX - currentX;
                 currentX = newX;
-                Log.d("trim", "X " + newX + " dx = " + dx);
 
                 int dxInt = (int) dx;
                 boolean hasUpdate = false;
@@ -176,12 +177,14 @@ public class SplitRangeView extends View {
                                 hasUpdate = false;
                             }
                         } else {
-                            float leftDiff = Math.abs(newX - activeSpan.offset);
-                            float rightDiff = Math.abs(newX - activeSpan.end());
-                            if (leftDiff < rightDiff && leftDiff <= handleSize) {
+                            boolean leftThumb = bound(activeSpan.offset, leftGravity).contains((int)newX, (int)newY);
+                            boolean rightThumb = bound(activeSpan.end(), rightGravity).contains((int)newX, (int)newY);
+                            if (leftThumb) {
                                 handleLeftMovement(activeSpan, dxInt);
-                            } else if (rightDiff < leftDiff && rightDiff <= handleSize) {
+                                activeSpan.leftDragging = true;
+                            } else if (rightThumb) {
                                 handleRightMovement(activeSpan, dxInt);
+                                activeSpan.rightDragging = true;
                             } else {
                                 int amount = computeActualDistance(activeSpan, dxInt);
                                 if (amount != 0) {
@@ -225,8 +228,6 @@ public class SplitRangeView extends View {
         } else {
             span.shrinkLeft(Math.min(dx, span.length - minimumSize));
         }
-
-        span.leftDragging = true;
     }
 
     private void handleRightMovement(Span span, int dx) {
@@ -238,13 +239,13 @@ public class SplitRangeView extends View {
         } else {
             span.length = Math.max(span.length + dx, minimumSize);
         }
-
-        span.rightDragging = true;
     }
 
     private int computeActualDistance(Span target, int dx) {
-        boolean canMove = dx < 0 && target.offset + dx > 0 || dx > 0 && target.end() + dx < getWidth();
-        if (!canMove) return 0;
+        boolean canMove = dx <= 0 && target.offset + dx > 0 || dx > 0 && target.end() + dx < getWidth();
+        if (!canMove) {
+            return dx <= 0 ? -target.offset : getWidth() - target.end(); // compensate
+        }
 
         for (Span child: rangeSpans) {
             if (child == target) {
@@ -270,9 +271,22 @@ public class SplitRangeView extends View {
         return dx;
     }
 
-    private Span findBarUnder(float x) {
+    private int extraBasedOnThumbGravity() {
+        int gravityPadding = 0;
+        int mask = (leftGravity & Gravity.HORIZONTAL_GRAVITY_MASK);
+        if (mask == Gravity.LEFT) {
+            gravityPadding = handleSize;
+        } else if (mask == Gravity.CENTER_HORIZONTAL) {
+            gravityPadding = handleSize / 2;
+        }
+
+        return gravityPadding;
+    }
+
+    private Span findActiveSpanUnder(float x) {
+        int extraPadding = extraBasedOnThumbGravity();
         for (Span range: rangeSpans) {
-            if (range.offset - handleSize / 2f < x && x < range.end() +  handleSize / 2f) {
+            if (range.handlesShowing && range.offset - extraPadding < x && x < range.end() +  extraPadding) {
                 return range;
             }
         }
@@ -287,13 +301,25 @@ public class SplitRangeView extends View {
 
     public void addSpan(int offset, int length, String info, Object obj) {
         Span newSpan = new Span(offset, length, info, obj);
+        if (verifyBoundsAreCorrect(newSpan)) {
+            rangeSpans.add(newSpan);
+        }
+    }
+
+    private boolean verifyBoundsAreCorrect(Span item) {
         for (Span range : rangeSpans) {
-            if ((overlap(newSpan, range))) {
-                Log.d("SplitRangeView", "Cannot have overlapping bars");
-                return;
+            if ((overlap(item, range))) {
+                Log.d(TAG, "Cannot have overlapping bars");
+                return false;
             }
         }
-        rangeSpans.add(newSpan);
+        return true;
+    }
+
+    public void addSpan(Span span) {
+        if (verifyBoundsAreCorrect(span)) {
+            rangeSpans.add(span);
+        }
     }
 
     public void addSpan(int offset, int length, String info) {
@@ -318,27 +344,53 @@ public class SplitRangeView extends View {
     }
 
     public void updateSpan(Object tag, String newInfo) {
-        for (Span span : rangeSpans) {
-            if (span.tag == tag) {
-                span.info = newInfo;
-                invalidate();
-                return;
-            }
+        Span span = findSpanByTag(tag);
+        if (span != null) {
+            span.info = newInfo;
+            invalidate();
         }
     }
 
     public void updateSpan(Object tag, boolean selected) {
-        for (Span span : rangeSpans) {
-            if (span.tag == tag) {
-                span.handlesShowing = selected;
-                invalidate();
-                return;
-            }
+        Span span = findSpanByTag(tag);
+        if (span != null) {
+            span.handlesShowing = selected;
+            invalidate();
         }
     }
 
+    public void updateSpanRange(Object tag, int offset, int length) {
+        Span span = findSpanByTag(tag);
+        if (span != null) {
+            int oldOffset = span.offset;
+            int oldLen = span.length;
+
+            span.offset = offset;
+            span.length = length;
+
+            for (Span target : rangeSpans) {
+                if (target != span && overlap(span, target)) {
+                    span.offset = oldOffset;
+                    span.length = oldLen;
+                    Log.d(TAG, "Property update fail: Overlapping");
+                }
+            }
+
+            invalidate();
+        }
+    }
+
+    private Span findSpanByTag(Object tag) {
+        for (Span span: rangeSpans) {
+            if (span.tag == tag) {
+                return span;
+            }
+        }
+        return null;
+    }
+
     private boolean overlap(Span target, Span source) {
-        return target.offset <= source.end() && source.offset <= target.end();
+        return target.offset < source.end() && source.offset < target.end();
     }
 
     @Override
@@ -346,27 +398,26 @@ public class SplitRangeView extends View {
         if (getWidth() > 0 && getHeight() > 0) {
 
             Span selectedSpan = null;
-            for (Span range: rangeSpans) {
-                boxRect.set(range.offset, top, range.end(), bottom);
+            for (Span item: rangeSpans) {
+                boxRect.set(item.offset, top, item.end(), bottom);
 
-                if (borderDrawable != null) {
-                    borderDrawable.setBounds((int) boxRect.left, (int)boxRect.top, (int)boxRect.right, (int)boxRect.bottom);
-                    if (range.handlesShowing) {
-                        borderDrawable.setState(SELECTED_STATE_SET);
-                    } else {
-                        borderDrawable.setState(EMPTY_STATE_SET);
+                if (!item.draw(canvas, boxRect)) {
+
+                    if (borderDrawable != null) {
+                        borderDrawable.setBounds((int) boxRect.left, (int)boxRect.top, (int)boxRect.right, (int)boxRect.bottom);
+                        borderDrawable.setState(item.handlesShowing ? SELECTED_STATE_SET : EMPTY_STATE_SET);
+                        borderDrawable.draw(canvas);
                     }
-                    borderDrawable.draw(canvas);
+
+                    String txt = item.info;
+                    if (!TextUtils.isEmpty(txt)) {
+                        int leftPad = (leftGravity & Gravity.HORIZONTAL_GRAVITY_MASK) == Gravity.RIGHT ? handleSize + thumbPadding : textPad;
+                        drawInfo(canvas, item, leftPad, boxRect);
+                    }
                 }
 
-                String txt = range.info;
-                if (!TextUtils.isEmpty(txt)) {
-                    int leftPad = (leftGravity & Gravity.HORIZONTAL_GRAVITY_MASK) == Gravity.RIGHT ? handleSize + thumbPadding : textPad;
-                    drawInfo(canvas, range, leftPad);
-                }
-
-                if (range.handlesShowing) {
-                    selectedSpan = range;
+                if (item.handlesShowing) {
+                    selectedSpan = item;
                 }
             }
             if (selectedSpan != null) {
@@ -386,7 +437,7 @@ public class SplitRangeView extends View {
         }
     }
 
-    private void drawInfo(Canvas canvas, Span span, int leftPadding) {
+    private void drawInfo(Canvas canvas, Span span, int leftPadding, RectF boxRect) {
         String txt = span.info;
         spanTextPaint.getTextBounds(txt, 0, span.info.length(), tempRect);
         if (boxRect.width() - 2*textPad < tempRect.width()) {
@@ -442,17 +493,40 @@ public class SplitRangeView extends View {
         float x = e.getX();
         Span spanToSelect = null;
         Span spanToDeselect = null;
-        for (Span range: rangeSpans) {
-            if (range.offset < x && x < range.end()) {
-                range.handlesShowing = true;
-                spanToSelect = range;
-            } else {
-                if (range.handlesShowing) {
-                    range.handlesShowing = false;
-                    spanToDeselect = range;
+        int gravityPadding = extraBasedOnThumbGravity();
+
+        for (Span item: rangeSpans) {
+
+            if (item.handlesShowing) {
+                if (x < item.offset - gravityPadding || x > item.end() + gravityPadding) { // is out ?
+                    item.handlesShowing = false;
+                    spanToDeselect = item;
+                    Log.d(TAG, "UNSelect " + spanToDeselect.hashCode());
+                } else {
+                    if (x < item.offset - gravityPadding + handleSize) {
+                        Log.d(TAG, "Left click");
+                        if (timeLineChangeListener != null) {
+                            timeLineChangeListener.onThumbClicked(item.tag, 0);
+                        }
+                    } else if (x > item.end() + gravityPadding - handleSize) {
+                        Log.d(TAG, "Right click");
+                        if (timeLineChangeListener != null) {
+                            timeLineChangeListener.onThumbClicked(item.tag, 1);
+                        }
+                    }
+                    if (spanToSelect != null) {
+                        spanToSelect.handlesShowing = false;
+                        spanToSelect = null;
+                    }
+                    break;
                 }
+            } else if (item.offset < x && x < item.end()) {
+                item.handlesShowing = true;
+                spanToSelect = item;
+                Log.d("Splity", "Select " + spanToSelect.hashCode());
             }
         }
+
         if (spanToSelect != null) {
             notifySelectionChange(spanToSelect.tag, true);
         } else if (spanToDeselect != null) {
@@ -472,9 +546,10 @@ public class SplitRangeView extends View {
     public interface TimeLineChangeListener {
         void onRangeChanged(Object tag, float startFraction, float endFraction);
         void onSelectionChange(Object tag, boolean selected);
+        void onThumbClicked(Object tag, int thumbId);
     }
 
-    static class Span {
+    public static class Span {
         int offset;
         int length;
         String info;
@@ -489,6 +564,14 @@ public class SplitRangeView extends View {
             this.length = length;
             this.info = info;
             this.tag = tag;
+        }
+
+        protected boolean draw(Canvas canvas, RectF bound) {
+            return false;
+        }
+
+        protected boolean isSelected() {
+            return handlesShowing;
         }
 
         public int end() {

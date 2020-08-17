@@ -3,6 +3,10 @@ package com.example.rangeview;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.os.Bundle;
 import android.widget.TextView;
 
@@ -23,6 +27,9 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private TextView infoView;
+    private Object lastRangeChangeObject;
+    private float testStartFraction;
+    private float testEndFraction;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -66,11 +73,31 @@ public class MainActivity extends AppCompatActivity {
 
         SplitRangeView splitRangeView = findViewById(R.id.split_range);
         splitRangeView.getLayoutParams().width = 60 * 100;
-        splitRangeView.addSpan(0, 100);
+//        splitRangeView.addSpan(0, 100, "", 1);
 
-        splitRangeView.addSpan(200, 399);
+        splitRangeView.addSpan(200, 399, "", 2);
 
-        splitRangeView.addSpan(600, 790);
-        splitRangeView.addSpan(2000, 2200);
+        splitRangeView.addSpan(800, 790, "", 3);
+        splitRangeView.addSpan(2000, 2200, "", 4);
+
+        Paint customSpanPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        customSpanPaint.setColor(Color.CYAN);
+
+        Paint customSelectedSpanPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        customSelectedSpanPaint.setColor(Color.WHITE);
+        customSelectedSpanPaint.setStyle(Paint.Style.STROKE);
+        customSelectedSpanPaint.setStrokeWidth(4);
+
+        SplitRangeView.Span span = new SplitRangeView.Span(0, 100, "", 1) {
+            @Override
+            protected boolean draw(Canvas canvas, RectF bound) {
+                canvas.drawRoundRect(bound, 8, 8, customSpanPaint);
+                if (isSelected()) {
+                    canvas.drawRoundRect(bound, 8, 8, customSelectedSpanPaint);
+                }
+                return true;
+            }
+        };
+        splitRangeView.addSpan(span);
     }
 }

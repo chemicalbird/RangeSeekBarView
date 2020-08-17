@@ -12,7 +12,7 @@ your created shape drawable as a drawable. Currently RangeView is only linear(ti
 
 ```sh
 dependencies {
-    implementation 'com.chemicalbird.android:range-seekview:0.0.3'
+    implementation 'com.chemicalbird.android:range-seekview:0.0.3-beta'
 }
 ```
 

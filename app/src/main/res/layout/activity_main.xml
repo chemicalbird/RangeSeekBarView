@@ -106,28 +106,38 @@
         android:clipToPadding="false"
         android:paddingLeft="200dp"
         android:paddingRight="200dp"
+        android:clipChildren="false"
         android:scrollbars="none">
         <FrameLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
+            android:clipChildren="false"
             android:background="@android:color/holo_purple">
 
             <com.android.rangeview.SplitRangeView
                 android:id="@+id/split_range"
-                android:layout_width="2000dp"
+                android:layout_width="1200dp"
                 android:layout_height="40dp"
                 android:textColor="@android:color/darker_gray"
                 app:background="@drawable/background_sel"
-                app:thumbSrc="@drawable/ic_navigate_next_black_24dp"
-                app:thumb_padding="-2dp"
-                app:srcTint="@android:color/white"
-                app:thumbGravity="right|center"
+                app:thumbSrc="@drawable/ic_crop_7_5_black_24dp"
+                app:thumb_size="24dp"
+                app:srcTint="@android:color/black"
+                app:thumbGravity="center|left"
                 app:selectionTint="@android:color/white"
                 />
         </FrameLayout>
     </HorizontalScrollView>
+
+    <Button
+        android:id="@+id/move_alittle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="12dp"
+        android:text="movealittle"/>
 
     <TextView
         android:id="@+id/info"
