@@ -28,6 +28,7 @@ public class SplitRangeView extends View {
     private static final String TAG = SplitRangeView.class.getSimpleName();
 
     private final int prefferedTextHeight;
+    private final boolean moveOnTouch;
     RectF boxRect = new RectF();
     int handleSize;
     int thumbPadding;
@@ -87,6 +88,7 @@ public class SplitRangeView extends View {
                 0, 0);
         handleSize = (int) typedArray.getDimension(R.styleable.RangeSeekBarView_thumb_size, dpToPx(context, 20));
         thumbPadding = typedArray.getDimensionPixelSize(R.styleable.RangeSeekBarView_thumb_padding, 0);
+        moveOnTouch = typedArray.getBoolean(R.styleable.RangeSeekBarView_move_on_touch, true);
 
         leftGravity = typedArray.getInt(R.styleable.RangeSeekBarView_thumbGravity, Gravity.CENTER);
         rightGravity = ViewHelper.revertGravity(leftGravity);
@@ -185,7 +187,7 @@ public class SplitRangeView extends View {
                             } else if (rightThumb) {
                                 handleRightMovement(activeSpan, dxInt);
                                 activeSpan.rightDragging = true;
-                            } else {
+                            } else if (moveOnTouch) {
                                 int amount = computeActualDistance(activeSpan, dxInt);
                                 if (amount != 0) {
                                     activeSpan.translateDragging = true;

@@ -25,6 +25,7 @@ import androidx.core.graphics.ColorUtils;
 import androidx.core.graphics.drawable.DrawableCompat;
 
 public class RangeSeekBarView extends View {
+    private final boolean moveOnTouch;
     Paint negativePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     PointF arrowPos = new PointF();
     RectF boxRect = new RectF();
@@ -43,7 +44,7 @@ public class RangeSeekBarView extends View {
     private int pointerId;
     private TimeLineChangeListener timeLineChangeListener;
 
-    private long maxValue;
+    private float minValueFactor;
 
     private Drawable handleDrawable;
     private Drawable handleRightDrawable;
@@ -72,6 +73,7 @@ public class RangeSeekBarView extends View {
         handleSize = (int) typedArray.getDimension(R.styleable.RangeSeekBarView_thumb_size, dpToPx(context, 20));
         thumbPadding = typedArray.getDimensionPixelSize(R.styleable.RangeSeekBarView_thumb_padding, 0);
         showTrace = typedArray.getBoolean(R.styleable.RangeSeekBarView_show_trace, true);
+        moveOnTouch = typedArray.getBoolean(R.styleable.RangeSeekBarView_move_on_touch, true);
 
         leftGravity = typedArray.getInt(R.styleable.RangeSeekBarView_thumbGravity, Gravity.CENTER);
         rightGravity = ViewHelper.revertGravity(leftGravity);
@@ -135,15 +137,18 @@ public class RangeSeekBarView extends View {
                 float newX = ev.getX(0);
                 float dx = newX - currentX;
                 currentX = newX;
-                Log.d("trim", "X " + newX + " dx = " + dx);
-//                if (dx < 5 && dy > dx) return super.onTouchEvent(ev);
 
                 boolean hasUpdate = true;
                 if (leftHandle.active) {
-                    x1 = Math.max(left, Math.min(x1 + dx, x2 - handleSize));
-                    Log.d("trim", "left - " + newX);
+                    x1 = Math.max(left, Math.min(x1 + dx, x2));
+                    if (minValueReached()) {
+                        x1 = x2 - minValueFactor * width();
+                    }
                 } else if (rightHandle.active) {
-                    x2 = Math.max(Math.min(x2 + dx, right), x1 + handleSize);
+                    x2 = Math.max(Math.min(x2 + dx, right), x1);
+                    if (minValueReached()) {
+                        x2 = x1 + minValueFactor * width();
+                    }
                 } else if (moveHandle.active) {
                     moveScene(dx);
                 } else if (Math.abs(newX - leftHandle.pos) <= handleSize) {
@@ -154,7 +159,7 @@ public class RangeSeekBarView extends View {
                     x2 = x2 + dx;
                     rightHandle.pointerId = pointerId;
                     rightHandle.active = true;
-                } else if (newX > x1 && newX < x2) {
+                } else if (moveOnTouch && newX > x1 && newX < x2) {
                     moveScene(dx);
                     moveHandle.active = true;
                 } else {
@@ -162,7 +167,7 @@ public class RangeSeekBarView extends View {
                 }
                 if (hasUpdate) {
                     if (timeLineChangeListener != null) {
-                        timeLineChangeListener.onRangeMove(convertToStart(), convertToEnd());
+                        timeLineChangeListener.onRangeMove(left() / width(), right() / width());
                     }
                     invalidate();
                 }
@@ -172,8 +177,7 @@ public class RangeSeekBarView extends View {
             case MotionEvent.ACTION_CANCEL:
                 if (timeLineChangeListener != null) {
                     if (moveHandle.active || leftHandle.active || rightHandle.active) {
-                        long duration = convertToEnd();
-                        timeLineChangeListener.onRangeChanged(convertToStart(), duration);
+                        timeLineChangeListener.onRangeChanged(left() / width(), right() / width());
                     }
                 }
                 leftHandle.active = false;
@@ -186,12 +190,8 @@ public class RangeSeekBarView extends View {
         return super.onTouchEvent(ev);
     }
 
-    private long convertToStart() {
-        return (long) (maxValue * (x1 - left) / width());
-    }
-
-    private long convertToEnd() {
-        return (long) (maxValue * ((x2-handleSize - left) / width()));
+    private boolean minValueReached() {
+        return minValueFactor > 0 && (x2 - x1) / width() < minValueFactor;
     }
 
     private void moveScene(float dx) {
@@ -216,22 +216,18 @@ public class RangeSeekBarView extends View {
         bottom = h - getPaddingBottom();
     }
 
-    public void setDuration(long duration) {
-        this.maxValue = duration;
-    }
+    public void updateSpanDimensions(float startFactor, float endFactor, boolean animate) {
+        if (width() == 0 || startFactor > endFactor) return;
 
-    public void resetState(long start, long duration, boolean animate) {
-        if (getWidth() == 0 || maxValue == 0) return;
-        float left = start == 0 ? this.left : this.left + width() * start / maxValue;
-        float right = duration == -1 ? this.right : this.right - (width() - width() * duration / maxValue);
-
+        float start = left + startFactor * width();
+        float end = left + endFactor * width();
         if (animate) {
-            ValueAnimator leftAnim = ValueAnimator.ofFloat(x1, left);
+            ValueAnimator leftAnim = ValueAnimator.ofFloat(x1, start);
             leftAnim.addUpdateListener(animation -> {
                 x1 = (float) animation.getAnimatedValue();
                 invalidate();
             });
-            ValueAnimator rightAnim = ValueAnimator.ofFloat(x2, right);
+            ValueAnimator rightAnim = ValueAnimator.ofFloat(x2, end);
             rightAnim.addUpdateListener(animation -> {
                 x2 = (float) animation.getAnimatedValue();
                 invalidate();
@@ -241,14 +237,22 @@ public class RangeSeekBarView extends View {
             set.play(leftAnim).with(rightAnim);
             set.start();
         } else {
-            x1 = left;
-            x2 = right;
+            x1 = start;
+            x2 = end;
             invalidate();
         }
     }
 
     private float width() {
-        return right - left - handleSize;
+        return right - left;
+    }
+
+    private float left() {
+        return x1 - left;
+    }
+
+    private float right() {
+        return x2 - left;
     }
 
     public void drawTrace1(Canvas canvas) {
@@ -342,16 +346,12 @@ public class RangeSeekBarView extends View {
         return rect;
     }
 
-    public void setRange() {
-        float diff = x2 / 3;
-        x1 += diff;
-        arrowPos.x += diff;
-        x2 -= diff;
-        invalidate();
-    }
-
     public void addIndicatorChangeListener(TimeLineChangeListener timeLineChangeListener) {
         this.timeLineChangeListener = timeLineChangeListener;
+    }
+
+    public void setMinValueFactor(float factor) {
+        this.minValueFactor = factor;
     }
 
     class Handle {
@@ -361,7 +361,7 @@ public class RangeSeekBarView extends View {
     }
 
     public interface TimeLineChangeListener {
-        void onRangeChanged(long start, long end);
-        void onRangeMove(long start, long end);
+        void onRangeChanged(float start, float end);
+        void onRangeMove(float start, float end);
     }
 }

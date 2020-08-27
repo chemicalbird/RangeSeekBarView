@@ -23,6 +23,7 @@
         <attr name="thumb_size" format="dimension"/>
         <attr name="thumb_padding" format="dimension"/>
         <attr name="show_trace" format="boolean"/>
+        <attr name="move_on_touch" format="boolean"/>
         <attr name="selectionTint" format="color"/>
     </declare-styleable>
 </resources>

@@ -14,16 +14,17 @@ import com.android.rangeview.RangeSeekBarView;
 import com.android.rangeview.SplitRangeView;
 
 public class MainActivity extends AppCompatActivity {
+    private long TOTAL = 1000L;
 
     RangeSeekBarView.TimeLineChangeListener listener = new RangeSeekBarView.TimeLineChangeListener() {
         @Override
-        public void onRangeChanged(long start, long end) {
-            infoView.setText(String.format("%d : %d", start, end));
+        public void onRangeChanged(float start, float end) {
+            infoView.setText(String.format("%.2f : %.2f", TOTAL * start, TOTAL * end));
         }
 
         @Override
-        public void onRangeMove(long start, long end) {
-            infoView.setText(String.format("%d : %d", start, end));
+        public void onRangeMove(float start, float end) {
+            infoView.setText(String.format("%.2f : %.2f", TOTAL * start, TOTAL * end));
         }
     };
     private TextView infoView;
@@ -39,36 +40,33 @@ public class MainActivity extends AppCompatActivity {
         infoView = findViewById(R.id.info);
 
         RangeSeekBarView seekBarView1 = findViewById(R.id.seekbar1);
-        seekBarView1.setDuration(1000);
+        seekBarView1.setMinValueFactor(50F / TOTAL);
         seekBarView1.addIndicatorChangeListener(listener);
 
         RangeSeekBarView seekBarView2 = findViewById(R.id.seekbar2);
-        seekBarView2.setDuration(1000);
+        seekBarView2.setMinValueFactor(150F / TOTAL);
         seekBarView2.addIndicatorChangeListener(listener);
 
         RangeSeekBarView seekBarView3 = findViewById(R.id.seekbar3);
-        seekBarView3.setDuration(1000);
         seekBarView3.addIndicatorChangeListener(listener);
 
         RangeSeekBarView seekBarView4 = findViewById(R.id.seekbar4);
-        seekBarView4.setDuration(1000);
         seekBarView4.addIndicatorChangeListener(listener);
 
         RangeSeekBarView seekBarView5 = findViewById(R.id.seekbar5);
-        seekBarView5.setDuration(1000);
         seekBarView5.addIndicatorChangeListener(listener);
 
         RangeSeekBarView seekBarView6 = findViewById(R.id.seekbar6);
-        seekBarView6.setDuration(1000);
+        seekBarView6.setMinValueFactor(0.1f);
         seekBarView6.addIndicatorChangeListener(listener);
 
         findViewById(R.id.reset).setOnClickListener(v -> {
-            seekBarView1.resetState(0, 1000, true);
-            seekBarView2.resetState(0, 1000, true);
-            seekBarView3.resetState(0, 1000, true);
-            seekBarView4.resetState(0, 1000, true);
-            seekBarView5.resetState(100, 400, true);
-            seekBarView6.resetState(0, 1000, true);
+            seekBarView1.updateSpanDimensions(0, 1, false);
+            seekBarView2.updateSpanDimensions(0, 1, true);
+            seekBarView3.updateSpanDimensions(0, 1, true);
+            seekBarView4.updateSpanDimensions(0, 1, true);
+            seekBarView5.updateSpanDimensions(0.1f, 0.4f, true);
+            seekBarView6.updateSpanDimensions(0, 1, true);
         });
 
         SplitRangeView splitRangeView = findViewById(R.id.split_range);

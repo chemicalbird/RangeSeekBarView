@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:clipChildren="false"
     tools:context=".MainActivity">
 
     <RelativeLayout
@@ -52,14 +53,14 @@
         android:layout_width="wrap_content"
         android:layout_height="36dp"
         android:layout_marginTop="12dp"
-        android:paddingLeft="6dp"
-        android:paddingRight="6dp"
-        app:thumbGravity="right|center"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        app:thumbGravity="left|center"
         app:show_trace="true"
         app:background="@drawable/background_1"
-        app:thumb_padding="12dp"
         app:thumb_size="18dp"
         app:thumbSrc="@drawable/ic_circle"
+        app:move_on_touch="false"
         />
 
     <com.android.rangeview.RangeSeekBarView
@@ -87,6 +88,7 @@
         app:srcTint="@color/colorPrimary"
         app:thumbSrc="@drawable/ic_circle"
         app:thumb_size="12dp"
+        app:thumbGravity="center|left"
         />
 
     <com.android.rangeview.RangeSeekBarView
@@ -118,7 +120,7 @@
 
             <com.android.rangeview.SplitRangeView
                 android:id="@+id/split_range"
-                android:layout_width="1200dp"
+                android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:textColor="@android:color/darker_gray"
                 app:background="@drawable/background_sel"
